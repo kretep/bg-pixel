@@ -1,5 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <ArduinoBLE.h>
+#include "util.h" // Include the external utility
 
 // NeoPixel setup
 #define NEOPIXEL_PIN D0
@@ -8,10 +9,10 @@ Adafruit_NeoPixel strip(NUM_PIXELS, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 // BLE setup
 BLEService colorService("12345678-1234-1234-1234-123456789abc"); // Custom BLE service UUID
-BLECharacteristic colorCharacteristic("87654321-4321-4321-4321-abcdefabcdef", BLEWrite, 3); // 3 bytes for RGB
+BLECharacteristic colorCharacteristic("87654321-4321-4321-4321-abcdefabcdef", BLEWrite, 3); // 3 bytes for HSV
 
-// Store last RGB values
-uint8_t lastRGB[3] = {0, 0, 0}; // Default to off (black)
+// Store last HSV values
+uint8_t lastHSV[3] = {0, 255, 51};
 
 void setup() {
   Serial.begin(115200);
@@ -47,21 +48,32 @@ void loop() {
     while (central.connected()) {
       // Check if the characteristic was written
       if (colorCharacteristic.written()) {
-        // Get the RGB data (3 bytes)
-        colorCharacteristic.readValue(lastRGB, 3);
+        // Get the HSV data (3 bytes)
+        colorCharacteristic.readValue(lastHSV, 3);
+
+        // Convert HSV to RGB
+        uint8_t r, g, b;
+        HSVtoRGB(lastHSV[0], lastHSV[1], lastHSV[2], r, g, b);
 
         // Debugging output
-        Serial.print("RGB Received: ");
-        Serial.print(lastRGB[0]);
+        Serial.print("HSV Received: ");
+        Serial.print(lastHSV[0]);
         Serial.print(", ");
-        Serial.print(lastRGB[1]);
+        Serial.print(lastHSV[1]);
         Serial.print(", ");
-        Serial.println(lastRGB[2]);
-      }
+        Serial.println(lastHSV[2]);
 
-      // Continuously update the NeoPixel with the last received color
-      strip.setPixelColor(0, strip.Color(lastRGB[0], lastRGB[1], lastRGB[2]));
-      strip.show();
+        Serial.print("Converted RGB: ");
+        Serial.print(r);
+        Serial.print(", ");
+        Serial.print(g);
+        Serial.print(", ");
+        Serial.println(b);
+
+        // Update NeoPixel color
+        strip.setPixelColor(0, strip.Color(r, g, b));
+        strip.show();
+      }
 
       delay(10); // Small delay to prevent excessive updates
     }
